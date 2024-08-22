@@ -1,0 +1,24 @@
+---
+- name: Query Oracle Database Role and Switchover Status
+  hosts: ora19cdg02.bwok.org
+  tasks:
+    - name: Source the bash profile and set environment variables
+      shell: |
+        # Set Environment Variables
+        export ORACLE_HOME=/u01/app/oracle/product/19.3.0/dbhome_1
+        export ORACLE_SID=orcl
+        export PATH=$PATH:$ORACLE_HOME/bin
+
+        # Run SQL Commands
+        echo "ALTER SYSTEM ARCHIVE LOG CURRENT;" | sqlplus -s / as sysdba
+        echo "ALTER SYSTEM ARCHIVE LOG CURRENT;" | sqlplus -s / as sysdba
+        echo "ALTER SYSTEM ARCHIVE LOG CURRENT;" | sqlplus -s / as sysdba
+
+        # Get Archive Log List
+        echo "ARCHIVE LOG LIST;" | sqlplus -s / as sysdba
+      register: db_status
+      ignore_errors: yes
+
+    - name: Display the database status
+      debug:
+        msg: "Database Status:\n{{ db_status.stdout }}"
