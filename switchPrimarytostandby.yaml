@@ -1,0 +1,63 @@
+---
+- name: Query Oracle Database Role and Switchover Status
+  hosts: ora19cdg02.bwok.org
+  tasks:
+    - name: Source the bash profile and set environment variables
+      shell: |
+        # Set Environment Variables
+        export ORACLE_HOME=/u01/app/oracle/product/19.3.0/dbhome_1
+        export ORACLE_SID=orcl
+        export PATH=$PATH:$ORACLE_HOME/bin
+
+        # Run SQL Query
+        echo "SELECT database_role, switchover_status FROM v\$database;" | sqlplus -s / as sysdba
+      register: db_status
+      ignore_errors: yes
+
+    - name: Display the database status
+      debug:
+        msg: "Database Status:\n{{ db_status.stdout }}"
+
+    - name: Check if database_role is TO STANDBY and perform switchover if needed
+      shell: |
+        # Set Environment Variables
+        export ORACLE_HOME=/u01/app/oracle/product/19.3.0/dbhome_1
+        export ORACLE_SID=orcl
+        export PATH=$PATH:$ORACLE_HOME/bin
+
+        # Check database role and switchover status
+        role_check=$(echo "SELECT database_role FROM v\$database;" | sqlplus -s / as sysdba | grep -i "TO STANDBY")
+
+        if [[ "$role_check" == *"PRIMARY          TO STANDBY"* ]]; then
+          # Execute switchover if role is TO STANDBY
+          echo "ALTER DATABASE COMMIT TO SWITCHOVER TO STANDBY;" | sqlplus -s / as sysdba
+        else
+          echo "No switchover needed"
+        fi
+      register: switchover_result
+      ignore_errors: yes
+
+    - name: Display switchover result
+      debug:
+        msg: "Switchover Result:\n{{ switchover_result.stdout }}"
+
+[root@ansible02 workflow]# cat OpenNewPrimary.yaml
+---
+- name: Query Oracle Database Role and Switchover Status
+  hosts: ora19cdg01.bwok.org
+  tasks:
+    - name: Source the bash profile and set environment variables
+      shell: |
+        # Set Environment Variables
+        export ORACLE_HOME=/u01/app/oracle/product/19.3.0/dbhome_1
+        export ORACLE_SID=orcl
+        export PATH=$PATH:$ORACLE_HOME/bin
+
+        # Run SQL Command to open the database
+        echo "ALTER DATABASE OPEN;" | sqlplus -s / as sysdba
+      register: db_status
+      ignore_errors: yes
+
+    - name: Display the database status
+      debug:
+        msg: "Database Status:\n{{ db_status.stdout }}"
